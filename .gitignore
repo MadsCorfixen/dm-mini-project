@@ -26,3 +26,9 @@ Manifest.toml
 *.iml
 *.xml
 
+.DS_Store
+Map/gb_1km.dbf
+Map/gb_1km.png
+Map/gb_1km.prj
+Map/gb_1km.shp
+Map/gb_1km.shx

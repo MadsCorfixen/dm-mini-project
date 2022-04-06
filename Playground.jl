@@ -5,44 +5,48 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 7c0de0d9-a2d2-4770-ad3d-2787ee8cc92f
-using CSV, DataFrames, Plots
+using CSV, DataFrames, Plots, Clustering, Pipe
 
 # ╔═╡ 2dd45d9f-d21e-4f3d-9824-6211918c2532
 begin
-	df = CSV.read("Data/Accident_Information.csv", DataFrame)
-	first(df, 10)
-end
+	cols = [:Latitude,:Longitude]
+	df = CSV.read("Data/Accident_Information.csv", DataFrame, select=cols) |> dropmissing  #|> tryparse.(Float64, coordinates[!,:])
 
-# ╔═╡ 27f253cd-f07b-4182-8010-ff24215c5ab6
-begin
-	coordinates = df[:, ["Latitude", "Longitude"]]
+	for col in cols
+		df[!, col] = tryparse.(Float64, df[!, col])
+	end
 	
-	coordinates[!, :Latitude] = tryparse.(Float64, coordinates[!, :Latitude])
-	coordinates[!, :Longitude] = tryparse.(Float64, coordinates[!, :Longitude])
+	filter!(AsTable(:) => t -> !all(isnothing, t), df)
+	filter!(AsTable(:) => t -> !all(ismissing, t), df)
+	filter!(AsTable(:) => t -> !all(isnan, t), df)
 end
 
-# ╔═╡ b4ea9cac-63a2-4acb-9232-b3265a8b1e85
-coordinates
-
-# ╔═╡ b1ac3af0-f4c7-4bba-88ad-029325d777da
-plot(coordinates[!, :Latitude], coordinates[!, :Longitude])
-
-# ╔═╡ cac3218d-a5e6-44cf-a97f-2c68f6349ae5
-coordinates[!, :Latitude]
+# ╔═╡ 20ac6197-36e9-4a57-b8bd-af4d396b590d
+begin
+	df_ = CSV.read("Data/Accident_Information.csv", DataFrame)
+	df_ = @pipe df_ |> filter(:Latitude => !=("NA"), _) |> filter(:Longitude => !=("NA"), _) |> parse.(Float64, _[!, [:Latitude, :Longitude]]);
+end
 
 # ╔═╡ bce3abee-5b8d-4810-9822-58f4eaa2b88d
-1+1
+cluster = dbscan(AbstractMatrix(df_), eps=0.0001, min_neighbors=3, min_cluster_size=10)
+
+# ╔═╡ 95751c28-a811-4061-9503-b58a3f30079c
+Matrix(df_)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Pipe = "b98c9c47-44ae-5843-9183-064241ee97a0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
 CSV = "~0.10.4"
+Clustering = "~0.14.2"
 DataFrames = "~1.3.2"
+Pipe = "~1.3.0"
 Plots = "~1.27.4"
 """
 
@@ -97,6 +101,12 @@ deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
 git-tree-sha1 = "bf98fa45a0a4cee295de98d4c1462be26345b9a1"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
 version = "0.1.2"
+
+[[deps.Clustering]]
+deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArrays", "Statistics", "StatsBase"]
+git-tree-sha1 = "75479b7df4167267d75294d14b58244695beb2ac"
+uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
+version = "0.14.2"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -172,6 +182,12 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+
+[[deps.Distances]]
+deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
+git-tree-sha1 = "3258d0659f812acde79e8a74b11f17ac06d0ca04"
+uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+version = "0.10.7"
 
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -520,6 +536,12 @@ git-tree-sha1 = "737a5957f387b17e74d4ad2f440eb330b39a62c5"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.0"
 
+[[deps.NearestNeighbors]]
+deps = ["Distances", "StaticArrays"]
+git-tree-sha1 = "ded92de95031d4a8c61dfb6ba9adb6f1d8016ddd"
+uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+version = "0.4.10"
+
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
@@ -561,6 +583,11 @@ deps = ["Dates"]
 git-tree-sha1 = "621f4f3b4977325b9128d5fae7a8b4829a0c2222"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.2.4"
+
+[[deps.Pipe]]
+git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
+uuid = "b98c9c47-44ae-5843-9183-064241ee97a0"
+version = "1.3.0"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1000,10 +1027,8 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╠═7c0de0d9-a2d2-4770-ad3d-2787ee8cc92f
 # ╠═2dd45d9f-d21e-4f3d-9824-6211918c2532
-# ╠═27f253cd-f07b-4182-8010-ff24215c5ab6
-# ╠═b4ea9cac-63a2-4acb-9232-b3265a8b1e85
-# ╠═b1ac3af0-f4c7-4bba-88ad-029325d777da
-# ╠═cac3218d-a5e6-44cf-a97f-2c68f6349ae5
+# ╠═20ac6197-36e9-4a57-b8bd-af4d396b590d
 # ╠═bce3abee-5b8d-4810-9822-58f4eaa2b88d
+# ╠═95751c28-a811-4061-9503-b58a3f30079c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
